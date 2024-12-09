@@ -1,0 +1,5 @@
+skip_list:
+  - fqcn[action-core]
+  - yaml[truthy]
+  - yaml[line-length]
+  - command-instead-of-shell

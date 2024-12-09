@@ -1,0 +1,25 @@
+- name: Copy the cloud-init network configuration to a new file
+  copy:
+    src: /etc/netplan/50-cloud-init.yaml
+    dest: /etc/netplan/00-default-interface.yaml
+    mode: "0600"
+    remote_src: yes
+  tags: [network]
+
+- name: Replace default network interface name
+  replace:
+    path: /etc/netplan/00-default-interface.yaml
+    regexp: "{{ ansible_default_ipv4.interface }}"
+    replace: "{{ interface_name }}"
+  tags: [network]
+
+- name: Apply the new network configuration
+  shell: netplan apply
+  tags: [network]
+  async: 0
+  poll: 0
+
+- name: Wait for network configuration to apply
+  wait_for_connection:
+    timeout: 30
+  tags: [network]

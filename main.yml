@@ -1,0 +1,17 @@
+---
+- name: Prepare OS
+  hosts: all
+  become: yes
+  roles:
+    - prepare-os
+  tasks:
+    - name: Get CPU information
+      shell: lscpu
+      changed_when: false
+      register: cpu_info
+      tags: [cpu]
+
+    - name: Display CPU information
+      debug:
+        var: cpu_info.stdout_lines
+      tags: [cpu]

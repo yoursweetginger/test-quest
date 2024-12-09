@@ -1,0 +1,2 @@
+- name: Update GRUB
+  shell: update-grub

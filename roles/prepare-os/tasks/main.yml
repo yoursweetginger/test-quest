@@ -1,0 +1,13 @@
+- name: Fact tasks
+  import_tasks: facts.yml
+
+- name: Encrypt tasks
+  import_tasks: encrypt.yml
+
+- name: CPU tasks
+  import_tasks: cpu.yml
+
+- name: Change default interface name
+  include_tasks: network.yml
+  when: ansible_default_ipv4.interface != interface_name
+  tags: network

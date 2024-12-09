@@ -1,0 +1,77 @@
+# Commented out code is for demonstration purposes only
+# Instead of this, encrypt tasks will have conditions to check if disk is more than 16 MiB
+#
+# Minimal size for LUKS encryption is 16 MiB
+# - name: Check if disk size is more than 16 MiB
+#   assert:
+#     that:
+#       - "ansible_devices[encrypt_disk].size | human_to_bytes > 16777216"
+#     fail_msg: "Disk size is less than 16 MiB"
+#     success_msg: "Disk size is more than 16 MiB"
+#   tags: [encrypt]
+
+# - name: Check if the partition size is more than 16 MiB
+#   assert:
+#     that:
+#       - "ansible_devices[root_disk].partitions[empty_partition_on_root_disk].size | human_to_bytes > 16777216"
+#     fail_msg: "The partition size is less than 16 MiB"
+#     success_msg: "The partition size is more than 16 MiB"
+#   tags: [encrypt]
+
+- name: Create dir for the LUKS keyfile
+  file:
+    path: "{{ luks.keyfile.dest | dirname }}"
+    mode: "0600"
+    state: directory
+  tags: [encrypt]
+
+- name: Copy the LUKS keyfile
+  copy:
+    src: "{{ luks.keyfile.src }}"
+    dest: "{{ luks.keyfile.dest }}"
+    mode: "0600"
+  tags: [encrypt]
+
+# In real case, I could use a loop to merge disk and partition tasks
+- name: Encrypt disk
+  community.crypto.luks_device:
+    name: "{{ encrypt_disk_name }}"
+    device: "/dev/{{ encrypt_disk }}"
+    state: opened
+    keyfile: "{{ luks.keyfile.dest }}"
+  when: ansible_devices[encrypt_disk].size | human_to_bytes > 16777216
+  tags: [encrypt]
+
+- name: Encrypt partition
+  community.crypto.luks_device:
+    name: "{{ encrypt_partition_name }}"
+    device: "/dev/{{ empty_partition_on_root_disk }}"
+    state: opened
+    keyfile: "{{ luks.keyfile.dest }}"
+  when: ansible_devices[root_disk].partitions[empty_partition_on_root_disk].size | human_to_bytes > 16777216
+  tags: [encrypt]
+
+- name: Refresh information about devices
+  setup:
+    filter: "ansible_device_links"
+  tags: [encrypt]
+
+- name: Add encrypt disk to crypttab
+  community.general.crypttab:
+    name: "{{ encrypt_disk_name }}"
+    backing_device: "UUID={{ ansible_device_links.uuids[encrypt_disk][0] }}"
+    state: present
+    opts: luks
+    password: "{{ luks.keyfile.dest }}"
+  when: ansible_devices[encrypt_disk].size | human_to_bytes > 16777216
+  tags: [encrypt]
+
+- name: Add empty partition on root disk to crypttab
+  community.general.crypttab:
+    name: "{{ encrypt_partition_name }}"
+    backing_device: "UUID={{ ansible_device_links.uuids[empty_partition_on_root_disk][0] }}"
+    state: present
+    opts: luks
+    password: "{{ luks.keyfile.dest }}"
+  when: ansible_devices[root_disk].partitions[empty_partition_on_root_disk].size | human_to_bytes > 16777216
+  tags: [encrypt]

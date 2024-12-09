@@ -1,0 +1,10 @@
+# encrypt_disk: xvdf
+encrypt_disk_name: encrypteddisk
+encrypt_partition_name: encryptedpartition
+
+luks:
+  keyfile:
+    src: "{{ playbook_dir }}/keyfile"
+    dest: /root/luks/keyfile
+
+interface_name: net0

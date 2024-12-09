@@ -1,0 +1,36 @@
+- name: Find the root partition uuid
+  set_fact:
+    root_partition_uuid: "{{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='uuid') | first }}"
+  tags: [facts]
+
+- name: Find the root partition name
+  set_fact:
+    root_partition_name: "{{ ansible_device_links.uuids | dict2items | selectattr('value', 'contains', root_partition_uuid) | map(attribute='key') | first }}"
+  tags: [facts]
+
+- name: Find the root disk by partition name
+  set_fact:
+    root_disk: "{{ ansible_devices | dict2items | selectattr('value.partitions', 'contains', root_partition_name) | map(attribute='key') | first }}"
+  tags: [facts]
+
+- name: Find the empty partition on the root disk
+  set_fact:
+    empty_partition_on_root_disk: "{{ ansible_devices[root_disk].partitions | dict2items | selectattr('value.uuid', 'equalto', None) | map(attribute='key') | first }}"
+  tags: [facts]
+
+- name: Check if the defined second disk has not the root partition
+  assert:
+    that:
+      - "encrypt_disk != root_disk"
+    fail_msg: "The second disk is the same as the root disk"
+    success_msg: "The second disk is different from the root disk"
+  tags: [facts]
+
+- name: Show information about disks and partitions
+  debug:
+    msg:
+      - "Root partition: {{ root_partition_name }}"
+      - "Empty partition on the root disk: {{ empty_partition_on_root_disk | default('None') }}"
+      - "Root disk: {{ root_disk }}"
+      - "Second disk: {{ encrypt_disk }}"
+  tags: [facts]
